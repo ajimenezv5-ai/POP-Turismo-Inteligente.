@@ -59,7 +59,9 @@ function answerQuestion(destination, interests, question){
   const q=normalize(question);
   if(/hotel|aloj|hosped|dormir|airbnb/.test(q)) return `Para buscar alojamiento en ${destination}, compara hoteles, hostales y alojamientos turísticos. Revisa ubicación, opiniones recientes, política de cancelación, precio total, impuestos y condiciones de seguridad. Usa la sección “Alojamiento” de POP para abrir búsquedas externas; POP no verifica disponibilidad ni procesa reservas.`;
   if(/transporte|taxi|uber|indrive|didi|bus|como llegar|llegar/.test(q)) return `Para movilizarte en ${destination}, compara transporte público, taxi autorizado y aplicaciones disponibles en la ciudad. Confirma tarifa, punto de recogida, identificación del conductor y rutas en la aplicación oficial. La disponibilidad depende del municipio.`;
-  if(/segur|clima|temporada|horario|precio|tarifa|disponib|reserva/.test(q)) return `No tengo acceso a información en tiempo real sobre ${destination}. Antes de viajar, consulta fuentes oficiales de turismo, autoridades locales, operadores y establecimientos para confirmar seguridad, clima, horarios, tarifas y disponibilidad.`;
+  if(/^(seguridad|clima|temporada|horarios?|precios?|tarifas?|disponibilidad|reservas?)$/.test(q.trim())) {
+  return `No tengo acceso a información en tiempo real sobre ${destination}. Antes de viajar, consulta fuentes oficiales de turismo, autoridades locales, operadores y establecimientos para confirmar seguridad, clima, horarios, tarifas y disponibilidad.`;
+}
   return buildRecommendations(destination, interests);
 }
 
