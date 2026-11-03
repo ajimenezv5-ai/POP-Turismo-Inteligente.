@@ -1,231 +1,275 @@
-import 'dotenv/config';
-import express from 'express';
-import path from 'path';
-import { fileURLToPath } from 'url';
+
+import "dotenv/config";
+import express from "express";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 const app = express();
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-app.use(express.json({limit:'30kb'}));
-app.use(express.static(path.join(__dirname,'public')));
+const PORT = process.env.PORT || 3000;
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-// Motor de recomendaciones por reglas: funciona sin claves API ni servicios de pago.
+app.use(express.json({ limit: "30kb" }));
+app.use(express.static(path.join(__dirname, "public")));
+
 const RULES = {
   naturaleza: {
-    title:'Naturaleza y paisajes', emoji:'🌿',
-    text:'Prioriza parques naturales, senderos señalizados, miradores y reservas de la zona. Elige recorridos acordes con tu condición física y consulta previamente cierres, clima, permisos y recomendaciones de conservación.'
+    title: "Naturaleza y paisajes",
+    general: "Prioriza parques naturales, senderos señalizados, miradores y recorridos de observación de fauna y flora. Confirma permisos, clima y condiciones antes de salir.",
+    cities: {
+      bogota: "Explora los cerros orientales y el Jardín Botánico.",
+      cali: "Considera el Ecoparque Río Pance y senderos habilitados de los Farallones.",
+      medellin: "Visita el Parque Arví y sus senderos señalizados.",
+      cartagena: "Incluye una salida a las Islas del Rosario con operador formal.",
+      santamarta: "Consulta las condiciones de acceso al Parque Tayrona.",
+      leticia: "Busca recorridos de naturaleza en la Amazonía con guías locales."
+    }
   },
   gastronomia: {
-    title:'Gastronomía local', emoji:'🍽️',
-    text:'Explora plazas de mercado, restaurantes tradicionales y rutas de cocina regional. Pregunta por platos típicos, ingredientes de temporada y opciones para necesidades alimentarias; confirma horarios directamente con cada establecimiento.'
+    title: "Gastronomía local",
+    general: "Prueba platos tradicionales en restaurantes locales y pregunta por ingredientes de temporada.",
+    cities: {
+      bogota: "Prueba ajiaco santafereño, chocolate con queso y cocina de plazas de mercado.",
+      cali: "Busca sancocho de gallina, arroz atollado, champús y lulada.",
+      medellin: "Prueba bandeja paisa y arepa antioqueña.",
+      cartagena: "Explora pescado frito, arroz con coco, patacón y arepa de huevo.",
+      santamarta: "Prueba pescado fresco, cayeye y preparaciones tradicionales del Caribe.",
+      leticia: "Conoce la gastronomía amazónica en establecimientos locales."
+    }
   },
   cultura: {
-    title:'Cultura y patrimonio', emoji:'🏛️',
-    text:'Incluye museos, centros históricos, arquitectura, talleres artesanales y recorridos guiados por la memoria local. Verifica días de apertura, tarifas y disponibilidad de visitas guiadas.'
+    title: "Cultura e historia",
+    general: "Incluye museos, centros históricos, arquitectura, música y experiencias culturales locales.",
+    cities: {
+      bogota: "Visita el Museo del Oro, el Museo Botero y La Candelaria.",
+      cali: "Conoce el centro histórico, el Museo La Tertulia y espacios dedicados a la salsa.",
+      medellin: "Explora la Comuna 13 con guías locales, el Museo de Antioquia y la Plaza Botero.",
+      cartagena: "Recorre la Ciudad Amurallada, el Castillo de San Felipe y Getsemaní.",
+      santamarta: "Visita el centro histórico y la Quinta de San Pedro Alejandrino.",
+      leticia: "Busca experiencias culturales comunitarias y centros de interpretación amazónica."
+    }
   },
   aventura: {
-    title:'Aventura y actividades', emoji:'🧗',
-    text:'Consulta operadores formales para caminatas, ciclismo, rafting u otras actividades disponibles en el destino. Verifica certificaciones, equipos, seguros, condiciones climáticas y nivel de dificultad antes de reservar.'
+    title: "Aventura y actividad",
+    general: "Elige actividades acordes con tu condición física y contrata prestadores formales.",
+    cities: {
+      bogota: "Considera ciclorutas, caminatas urbanas y recorridos guiados.",
+      cali: "Consulta actividades de río y caminatas con operadores autorizados.",
+      medellin: "Explora rutas de bicicleta, parapente u otras actividades con empresas certificadas.",
+      cartagena: "Consulta actividades náuticas con operadores autorizados.",
+      santamarta: "Pregunta por caminatas y actividades acuáticas con operadores formales.",
+      leticia: "Considera recorridos fluviales y caminatas guiadas."
+    }
   },
   familia: {
-    title:'Planes para compartir en familia', emoji:'👨‍👩‍👧',
-    text:'Busca parques, espacios interactivos, recorridos cortos y actividades aptas para distintas edades. Confirma accesibilidad, servicios sanitarios, tiempos de traslado y restricciones por edad.'
+    title: "Planes familiares",
+    general: "Prefiere recorridos moderados, lugares con servicios básicos y actividades apropiadas para las edades del grupo.",
+    cities: {
+      bogota: "Considera el Jardín Botánico, Maloka y parques urbanos.",
+      cali: "Incluye el Zoológico de Cali, parques y actividades culturales.",
+      medellin: "Considera el Parque Explora, el Planetario y el Jardín Botánico.",
+      cartagena: "Combina recorridos cortos por el centro histórico con descansos.",
+      santamarta: "Busca playas y recorridos familiares con servicios adecuados.",
+      leticia: "Elige experiencias educativas y de naturaleza apropiadas para niños."
+    }
   },
   descanso: {
-    title:'Descanso y bienestar', emoji:'🌅',
-    text:'Considera playas tranquilas donde aplique, termales, jardines, alojamientos rurales o espacios de bienestar. Revisa condiciones de acceso, seguridad, servicios incluidos y políticas de reserva.'
+    title: "Descanso y bienestar",
+    general: "Organiza un itinerario tranquilo, con pausas, espacios verdes y servicios de bienestar.",
+    cities: {
+      bogota: "Alterna cafés, parques urbanos, jardines y espacios culturales.",
+      cali: "Busca parques, cafés y espacios de bienestar.",
+      medellin: "Considera jardines, cafés y recorridos suaves por barrios tradicionales.",
+      cartagena: "Camina temprano por el centro histórico y reserva tiempo para descansar.",
+      santamarta: "Prioriza alojamientos y playas con acceso claro y servicios adecuados.",
+      leticia: "Planea tiempos de descanso y experiencias de naturaleza de baja exigencia."
+    }
   }
 };
+
 const REGION_HINTS = [
-  {keys:['caribe','cartagena','santa marta','riohacha','guajira','barranquilla','san andres','san andrés','providencia','sincelejo','monteria','montería','valledupar'],name:'Gran Caribe',hint:'En la región Caribe puedes explorar playas, patrimonio histórico, música y gastronomía costera; en zonas naturales sigue las indicaciones de conservación y seguridad.'},
-  {keys:['medellin','medellín','antioquia','eje cafetero','pereira','manizales','armenia','caldas','risaralda','quindio','quindío','cali','valle del cauca'],name:'Andes Occidentales',hint:'En los Andes Occidentales considera pueblos patrimoniales, paisajes cafeteros, miradores, rutas gastronómicas y experiencias culturales.'},
-  {keys:['pacifico','pacífico','choco','chocó','nuqui','nuquí','bahia solano','bahía solano','buenaventura','tumaco','guapi'],name:'Pacífico',hint:'En el Pacífico puedes investigar experiencias de naturaleza, biodiversidad, cultura afrocolombiana y gastronomía local. Confirma temporadas, transporte y condiciones con operadores locales.'},
-  {keys:['bogota','bogotá','boyaca','boyacá','santander','bucaramanga','tunja','cundinamarca','norte de santander','cucuta','cúcuta'],name:'Andes Orientales',hint:'En los Andes Orientales explora centros históricos, pueblos, museos, arquitectura, paisajes de montaña y cocina regional.'},
-  {keys:['huila','san agustin','san agustín','tierradentro','cauca','popayan','popayán','nariño','pasto','putumayo'],name:'Macizo Colombiano',hint:'En el Macizo Colombiano puedes consultar sitios arqueológicos, paisajes andinos, termales y tradiciones culturales, verificando accesos y condiciones locales.'},
-  {keys:['amazonas','leticia','amazonía','amazonia','orinoco','orinoquia','llanos','meta','villavicencio','vichada','guaviare','arauca','casanare'],name:'Amazonía–Orinoquía',hint:'En la Amazonía y Orinoquía prioriza turismo de naturaleza responsable, observación de fauna y experiencias comunitarias con guías y operadores autorizados.'}
+  { terms: ["cartagena", "barranquilla", "santamarta", "riohacha", "sincelejo", "monteria", "valledupar"], name: "Gran Caribe", hint: "Combina patrimonio, playas, música y gastronomía. Ten en cuenta el clima y las condiciones del mar." },
+  { terms: ["medellin", "antioquia", "cali", "pereira", "manizales", "armenia", "quindio", "risaralda", "caldas"], name: "Andes Occidentales", hint: "Combina ciudades, cultura cafetera, naturaleza y gastronomía regional." },
+  { terms: ["quibdo", "nuqui", "bahia solano", "buenaventura", "pasto", "popayan"], name: "Pacífico y suroccidente", hint: "Destaca por su biodiversidad y riqueza cultural. Planea con guías locales." },
+  { terms: ["bogota", "tunja", "villavicencio", "bucaramanga", "cucuta", "santander", "boyaca"], name: "Andes Orientales", hint: "Ofrece centros históricos, paisajes de montaña y gastronomía." },
+  { terms: ["leticia", "amazonas", "mitu", "vaupes", "guaviare", "puerto carreno", "vichada"], name: "Amazonía y Orinoquía", hint: "Requiere planificación responsable y respeto por los ecosistemas y comunidades." }
 ];
-function normalize(s=''){return String(s).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();}
-function regionFor(destination){const d=normalize(destination);return REGION_HINTS.find(r=>r.keys.some(k=>d.includes(normalize(k))));}
 
-const CITY_GUIDES = {
-  bogota: {
-    cultura: 'Visita el centro histórico de La Candelaria, conoce el Museo del Oro y explora las colecciones del Museo Botero. Puedes complementar el recorrido con arquitectura y patrimonio del centro.',
-    naturaleza: 'Considera los cerros orientales, los senderos autorizados de Monserrate y el Jardín Botánico de Bogotá. Verifica previamente las condiciones de acceso.',
-    gastronomia: 'Explora la Plaza de Paloquemao, prueba el ajiaco santafereño y descubre restaurantes de cocina tradicional colombiana.',
-    aventura: 'Consulta caminatas guiadas por los cerros orientales y actividades recreativas autorizadas. Verifica dificultad y condiciones climáticas.',
-    familia: 'Considera el Jardín Botánico, el Planetario y los museos con actividades educativas para distintas edades.',
-    descanso: 'Explora jardines, parques urbanos y espacios de bienestar. Comprueba horarios y condiciones de ingreso.'
-  },
-  cali: {
-    cultura: 'Conoce el barrio San Antonio, el Museo La Tertulia y el monumento al Grupo Niche. Explora también la historia musical y cultural de la ciudad.',
-    naturaleza: 'Visita el Zoológico de Cali, el río Pance y los espacios verdes de la ciudad. Confirma condiciones de acceso y conservación.',
-    gastronomia: 'Prueba el sancocho de gallina, el arroz atollado, las empanadas vallunas y el champús. Explora mercados y restaurantes tradicionales.',
-    aventura: 'Investiga actividades de senderismo en los Farallones de Cali con operadores autorizados y rutas permitidas.',
-    familia: 'Considera el Zoológico de Cali, el Gato del Río y los parques urbanos para actividades familiares.',
-    descanso: 'Explora los parques, zonas verdes y espacios tranquilos de Cali. También puedes consultar opciones de bienestar.'
-  },
-  medellin: {
-    cultura: 'Explora el Museo de Antioquia, la Plaza Botero, el centro histórico y los recorridos culturales de la Comuna 13.',
-    naturaleza: 'Visita el Jardín Botánico, el Parque Arví y los espacios verdes de Medellín. Comprueba previamente accesos y horarios.',
-    gastronomia: 'Prueba la bandeja paisa, las arepas antioqueñas y la cocina tradicional. Explora mercados y restaurantes locales.',
-    aventura: 'Consulta caminatas y experiencias de naturaleza en el entorno del Parque Arví con operadores autorizados.',
-    familia: 'Considera el Parque Explora, el Planetario, el Jardín Botánico y los espacios recreativos de la ciudad.',
-    descanso: 'Explora jardines, parques y espacios de bienestar. Puedes considerar recorridos tranquilos por zonas verdes.'
-  },
-  cartagena: {
-    cultura: 'Recorre la Ciudad Amurallada, el barrio Getsemaní y el Castillo de San Felipe de Barajas. Descubre la arquitectura y la historia colonial.',
-    naturaleza: 'Consulta excursiones responsables a las Islas del Rosario y playas de la zona. Verifica condiciones marítimas y operadores autorizados.',
-    gastronomia: 'Prueba pescado con arroz con coco, patacones, arepa de huevo y dulces tradicionales. Explora la cocina caribeña.',
-    aventura: 'Consulta actividades náuticas y excursiones con operadores formales. Verifica seguros, equipos y condiciones del mar.',
-    familia: 'Considera recorridos por las murallas, plazas históricas y actividades culturales aptas para diferentes edades.',
-    descanso: 'Explora playas y espacios de bienestar. Compara las condiciones de acceso y servicios antes de desplazarte.'
-  },
-  santa_marta: {
-    cultura: 'Visita el centro histórico, la Quinta de San Pedro Alejandrino y los espacios culturales relacionados con la historia de Santa Marta.',
-    naturaleza: 'Investiga el Parque Nacional Natural Tayrona y los paisajes de Minca. Confirma cierres, permisos y condiciones ambientales.',
-    gastronomia: 'Prueba pescado fresco, arroz con coco, patacones y preparaciones tradicionales del Caribe.',
-    aventura: 'Consulta senderismo y actividades de naturaleza en Minca y zonas autorizadas del Tayrona con guías formales.',
-    familia: 'Considera recorridos por el centro histórico, playas con condiciones apropiadas y actividades culturales.',
-    descanso: 'Explora playas y alojamientos de descanso. Verifica condiciones del mar, accesos y servicios.'
-  },
-  leticia: {
-    cultura: 'Conoce la cultura amazónica mediante experiencias comunitarias, mercados locales y recorridos interpretativos con guías de la región.',
-    naturaleza: 'Investiga recorridos por el río Amazonas y visitas autorizadas a áreas naturales como Amacayacu. Confirma permisos y condiciones de acceso.',
-    gastronomia: 'Descubre preparaciones amazónicas, pescados de río y frutas regionales en establecimientos locales.',
-    aventura: 'Consulta recorridos de observación de fauna y navegación con operadores autorizados y medidas de seguridad.',
-    familia: 'Considera experiencias educativas sobre biodiversidad y cultura amazónica adecuadas para las edades de los visitantes.',
-    descanso: 'Explora alojamientos de naturaleza y experiencias tranquilas en entornos amazónicos, respetando las recomendaciones ambientales.'
+function normalize(value = "") {
+  return String(value)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^\w\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function regionFor(destination) {
+  const dest = normalize(destination);
+  return REGION_HINTS.find(region =>
+    region.terms.some(term => dest.includes(normalize(term)))
+  ) || null;
+}
+
+function findCityKey(destination) {
+  const dest = normalize(destination).replace(/\s+/g, "");
+  const keys = ["bogota", "cali", "medellin", "cartagena", "santamarta", "leticia"];
+  return keys.find(key => dest.includes(key)) || null;
+}
+
+function buildRecommendations(destination, interests = []) {
+  const dest = String(destination || "Colombia").trim().slice(0, 160);
+  const cityKey = findCityKey(dest);
+  const region = regionFor(dest);
+
+  const valid = (Array.isArray(interests) ? interests : [])
+    .map(item => normalize(item))
+    .filter(item => Object.prototype.hasOwnProperty.call(RULES, item));
+
+  const chosen = valid.length ? [...new Set(valid)] : ["naturaleza", "gastronomia", "cultura"];
+
+  const intro = `Recomendaciones para ${dest}:`;
+  const items = chosen.slice(0, 5).map((key, index) => {
+    const rule = RULES[key];
+    const cityText = cityKey && rule.cities[cityKey] ? rule.cities[cityKey] : rule.general;
+    return `${index + 1}. ${rule.title}: ${cityText}`;
+  });
+
+  if (region) {
+    items.push(`Contexto regional (${region.name}): ${region.hint}`);
+  } else {
+    items.push("Confirma qué atractivos están abiertos y cuáles son las condiciones de acceso en fuentes oficiales.");
   }
-};
 
+  items.push("Antes de desplazarte: verifica horarios, tarifas, disponibilidad, vías, clima y condiciones de seguridad. POP no realiza reservas ni confirma servicios.");
 
-
-function buildRecommendations(destination, interests){
-  const dest=String(destination||'Colombia').trim().slice(0,160);
-  const normalizedDest=normalize(dest).replace(/\s+/g,'_');
-
-  const valid=(Array.isArray(interests)?interests:[])
-    .map(x=>normalize(x))
-    .filter(x=>RULES[x]);
-
-  const chosen=valid.length?valid:['naturaleza','gastronomia','cultura'];
-  const region=regionFor(dest);
-
-  const cityKey=Object.keys(CITY_GUIDES).find(key =>
-    normalizedDest.includes(key)
-  );
-
-  const guide=cityKey?CITY_GUIDES[cityKey]:null;
-
-  const intro=`Propuesta turística para ${dest}${region?` (región: ${region.name})`:''}. Recomendaciones predefinidas del motor gratuito POP; no consulta información en tiempo real.`;
-
-  const items=chosen.slice(0,5).map((key,i)=>{
-    const description=guide?.[key]||RULES[key].text;
-    return `${i+1}. ${RULES[key].emoji} ${RULES[key].title}\n${description}`;
-  });
-
-  if(region) items.push(`${items.length+1}. 🧭 Contexto regional\n${region.hint}`);
-
-  return `${intro}\n\n${items.join('\n\n')}\n\nAntes de desplazarte: verifica horarios, tarifas, disponibilidad, estado de las vías, clima y condiciones de seguridad en fuentes oficiales y con los prestadores. POP no realiza reservas ni confirma servicios.`;
+  return `${intro}\n\n${items.join("\n\n")}`;
 }
-{
-  const dest=String(destination||'Colombia').trim().slice(0,160);
-  const normalizedDest=normalize(dest).replace(/\s+/g,'_');
 
-  const valid=(Array.isArray(interests)?interests:[])
-    .map(x=>normalize(x))
-    .filter(x=>RULES[x]);
+function answerQuestion(destination, interests, question) {
+  const q = normalize(question);
 
-  const chosen=valid.length?valid:['naturaleza','gastronomia','cultura'];
-  const region=regionFor(dest);
+  if (/\b(hotel|alojamiento|hospedaje|dormir|airbnb)\b/.test(q)) {
+    return `Para encontrar alojamiento en ${destination}, compara ubicación, comentarios recientes, políticas de cancelación y precio total. Verifica directamente con el establecimiento. POP no confirma disponibilidad ni realiza reservas.`;
+  }
 
-  const cityKey=Object.keys(CITY_GUIDES).find(key =>
-    normalizedDest.includes(key)
-  );
+  if (/\b(transporte|taxi|uber|indrive|didi|bus|llegar|como llegar)\b/.test(q)) {
+    return `Para movilizarte en ${destination}, compara transporte público, taxis autorizados y aplicaciones disponibles. Revisa tarifas y datos del conductor antes de iniciar el viaje.`;
+  }
 
-  const guide=cityKey?CITY_GUIDES[cityKey]:null;
+  if (/^(seguridad|clima|temporada|horarios?|precios?|tarifas?|disponibilidad|reservas?)$/.test(q)) {
+    return `No tengo acceso a información en tiempo real sobre ${destination}. Verifica estos datos en fuentes oficiales y directamente con los prestadores.`;
+  }
 
-  const intro=`Propuesta turística para ${dest}${region?` (región: ${region.name})`:''}. Recomendaciones predefinidas del motor gratuito POP; no consulta información en tiempo real.`;
-
-  const items=chosen.slice(0,5).map((key,i)=>{
-    const description=guide?.[key]||RULES[key].text;
-    return `${i+1}. ${RULES[key].emoji} ${RULES[key].title}\n${description}`;
-  });
-
-  if(region) items.push(`${items.length+1}. 🧭 Contexto regional\n${region.hint}`);
-
-  return `${intro}\n\n${items.join('\n\n')}\n\nAntes de desplazarte: verifica horarios, tarifas, disponibilidad, estado de las vías, clima y condiciones de seguridad en fuentes oficiales y con los prestadores. POP no realiza reservas ni confirma servicios.`;
-}
-{
-  const dest=String(destination||'Colombia').trim().slice(0,160);
-  const normalizedDest=normalize(dest).replace(/\s+/g,'_');
-
-  const valid=(Array.isArray(interests)?interests:[])
-    .map(x=>normalize(x))
-    .filter(x=>RULES[x]);
-
-  const chosen=valid.length?valid:['naturaleza','gastronomia','cultura'];
-  const region=regionFor(dest);
-
-  const cityKey=Object.keys(CITY_GUIDES).find(key =>
-    normalizedDest.includes(key)
-  );
-
-  const guide=cityKey?CITY_GUIDES[cityKey]:null;
-
-  const intro=`Propuesta turística para ${dest}${region?` (región: ${region.name})`:''}. Recomendaciones predefinidas del motor gratuito POP; no consulta información en tiempo real.`;
-
-  const items=chosen.slice(0,5).map((key,i)=>{
-    const description=guide?.[key]||RULES[key].text;
-    return `${i+1}. ${RULES[key].emoji} ${RULES[key].title}\n${description}`;
-  });
-
-  if(region) items.push(`${items.length+1}. 🧭 Contexto regional\n${region.hint}`);
-
-  return `${intro}\n\n${items.join('\n\n')}\n\nAntes de desplazarte: verifica horarios, tarifas, disponibilidad, estado de las vías, clima y condiciones de seguridad en fuentes oficiales y con los prestadores. POP no realiza reservas ni confirma servicios.`;
-}
-{
-  const dest=String(destination||'Colombia').trim().slice(0,160);
-  const valid=(Array.isArray(interests)?interests:[]).map(x=>normalize(x)).filter(x=>RULES[x]);
-  const chosen=valid.length?valid:['naturaleza','gastronomia','cultura'];
-  const region=regionFor(dest);
-  const intro=`Propuesta orientativa para ${dest}${region?` (referencia regional: ${region.name})`:''}. Se elaboró con reglas predefinidas a partir de tus intereses; no consulta datos en tiempo real.`;
-  const items=chosen.slice(0,5).map((key,i)=>`${i+1}. ${RULES[key].emoji} ${RULES[key].title}\n${RULES[key].text}`);
-  if(region) items.push(`${items.length+1}. 🧭 Contexto regional\n${region.hint}`);
-  return `${intro}\n\n${items.join('\n\n')}\n\nAntes de desplazarte: verifica horarios, tarifas, disponibilidad, estado de las vías, clima y condiciones de seguridad en fuentes oficiales y con los prestadores. POP no realiza reservas ni confirma servicios.`;
-}
-function answerQuestion(destination, interests, question){
-  const q=normalize(question);
-  if(/hotel|aloj|hosped|dormir|airbnb/.test(q)) return `Para buscar alojamiento en ${destination}, compara hoteles, hostales y alojamientos turísticos. Revisa ubicación, opiniones recientes, política de cancelación, precio total, impuestos y condiciones de seguridad. Usa la sección “Alojamiento” de POP para abrir búsquedas externas; POP no verifica disponibilidad ni procesa reservas.`;
-  if(/transporte|taxi|uber|indrive|didi|bus|como llegar|llegar/.test(q)) return `Para movilizarte en ${destination}, compara transporte público, taxi autorizado y aplicaciones disponibles en la ciudad. Confirma tarifa, punto de recogida, identificación del conductor y rutas en la aplicación oficial. La disponibilidad depende del municipio.`;
-  if(/^(seguridad|clima|temporada|horarios?|precios?|tarifas?|disponibilidad|reservas?)$/.test(q.trim())) {
-  return `No tengo acceso a información en tiempo real sobre ${destination}. Antes de viajar, consulta fuentes oficiales de turismo, autoridades locales, operadores y establecimientos para confirmar seguridad, clima, horarios, tarifas y disponibilidad.`;
-}
   return buildRecommendations(destination, interests);
 }
 
-app.post('/api/survey', async (req,res) => {
+app.get("/api/health", (_req, res) => {
+  res.json({
+    ok: true,
+    service: "POP Turismo Inteligente",
+    recommendations: "locales-sin-costo",
+    googleSheetsConfigured: Boolean(process.env.GOOGLE_SHEETS_WEB_APP_URL)
+  });
+});
+
+app.post("/api/recommend", (req, res) => {
   try {
-    const endpoint = process.env.GOOGLE_SHEETS_WEB_APP_URL;
-    if (!endpoint) return res.status(503).json({error:'Falta configurar GOOGLE_SHEETS_WEB_APP_URL en Render.'});
+    const destination = String(req.body?.destination || "Colombia").trim();
+    const interests = Array.isArray(req.body?.interests) ? req.body.interests : [];
+    const question = String(req.body?.question || "");
+
+    if (destination.length > 160 || question.length > 1000) {
+      return res.status(400).json({ ok: false, error: "La consulta supera la longitud permitida." });
+    }
+
+    const text = answerQuestion(destination, interests, question);
+    return res.json({ ok: true, text });
+  } catch (error) {
+    console.error("Error en /api/recommend:", error);
+    return res.status(500).json({ ok: false, error: "No fue posible generar recomendaciones." });
+  }
+});
+
+app.post("/api/survey", async (req, res) => {
+  try {
+    const sheetUrl = process.env.GOOGLE_SHEETS_WEB_APP_URL;
+
+    if (!sheetUrl) {
+      return res.status(503).json({
+        ok: false,
+        error: "Falta configurar GOOGLE_SHEETS_WEB_APP_URL en Render."
+      });
+    }
+
+    let parsedUrl;
+    try {
+      parsedUrl = new URL(sheetUrl);
+    } catch {
+      return res.status(500).json({ ok: false, error: "La URL de Google Sheets no es válida." });
+    }
+
+    const validHost = parsedUrl.hostname === "script.google.com" ||
+      parsedUrl.hostname.endsWith(".googleusercontent.com");
+
+    if (parsedUrl.protocol !== "https:" || !validHost) {
+      return res.status(400).json({ ok: false, error: "La URL configurada no parece una URL segura de Google Apps Script." });
+    }
+
     const entry = req.body || {};
-    if (!entry.respuestas || Object.keys(entry.respuestas).length !== 10) return res.status(400).json({error:'La encuesta debe incluir las 10 respuestas.'});
-    const response = await fetch(endpoint, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(entry), redirect:'follow'});
-    const text = await response.text();
-    if (!response.ok) return res.status(502).json({error:'Google Sheets no aceptó el registro: '+response.status});
-    let result; try { result=JSON.parse(text); } catch { result={}; }
-    if (result.ok === false) return res.status(502).json({error:result.error || 'No se pudo guardar en Google Sheets.'});
-    res.json({ok:true});
-  } catch (err) { console.error('Error guardando encuesta:',err.message); res.status(500).json({error:'No fue posible guardar la encuesta.'}); }
+    const answers = entry.respuestas;
+
+    if (!answers || typeof answers !== "object" || Array.isArray(answers) || Object.keys(answers).length !== 10) {
+      return res.status(400).json({ ok: false, error: "La encuesta debe contener exactamente 10 respuestas." });
+    }
+
+    const values = Object.values(answers);
+
+    if (values.some(value => !Number.isInteger(Number(value)) || Number(value) < 1 || Number(value) > 5)) {
+      return res.status(400).json({ ok: false, error: "Cada respuesta debe ser un número entre 1 y 5." });
+    }
+
+    const payload = {
+      destino: String(entry.destino || "").slice(0, 160),
+      intereses: Array.isArray(entry.intereses)
+        ? entry.intereses.map(x => String(x).slice(0, 80))
+        : String(entry.intereses || "").slice(0, 500),
+      respuestas: answers,
+      promedio: Number(entry.promedio) || values.reduce((sum, value) => sum + Number(value), 0) / 10,
+      comentario: String(entry.comentario || entry.observaciones || "").slice(0, 3000)
+    };
+
+    const response = await fetch(sheetUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+      redirect: "follow"
+    });
+
+    const responseText = await response.text();
+    let result;
+
+    try {
+      result = JSON.parse(responseText);
+    } catch {
+      throw new Error("Google Apps Script no devolvió una respuesta JSON válida. Revisa que la aplicación web esté publicada.");
+    }
+
+    if (!response.ok || result.ok !== true) {
+      throw new Error(result.error || result.mensaje || `Google Sheets respondió con estado ${response.status}.`);
+    }
+
+    return res.json({ ok: true, message: "Encuesta guardada correctamente en Google Sheets." });
+  } catch (error) {
+    console.error("Error al guardar encuesta:", error);
+    return res.status(502).json({
+      ok: false,
+      error: `No se pudo guardar la encuesta en Google Sheets: ${error.message}`
+    });
+  }
 });
 
-app.get('/api/health', (_req,res) => res.json({configured:true, mode:'reglas', model:'motor-local-pop'}));
-app.post('/api/recommend', (req,res) => {
-  const {destination='', interests=[], question=''} = req.body || {};
-  const safeDestination=String(destination||'Colombia').slice(0,160);
-  const safeInterests=Array.isArray(interests)?interests.slice(0,10):[];
-  const text=String(question).trim()?answerQuestion(safeDestination,safeInterests,String(question).slice(0,1800)):buildRecommendations(safeDestination,safeInterests);
-  res.json({text,mode:'reglas'});
+app.listen(PORT, () => {
+  console.log(`POP Turismo Inteligente escuchando en el puerto ${PORT}`);
 });
-
-const port = Number(process.env.PORT || 3000);
-app.listen(port,()=>console.log(`POP disponible en http://localhost:${port} (modo reglas, sin API de pago)`));
