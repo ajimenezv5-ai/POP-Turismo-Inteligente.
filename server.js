@@ -45,7 +45,145 @@ const REGION_HINTS = [
 ];
 function normalize(s=''){return String(s).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();}
 function regionFor(destination){const d=normalize(destination);return REGION_HINTS.find(r=>r.keys.some(k=>d.includes(normalize(k))));}
+
+const CITY_GUIDES = {
+  bogota: {
+    cultura: 'Visita el centro histórico de La Candelaria, conoce el Museo del Oro y explora las colecciones del Museo Botero. Puedes complementar el recorrido con arquitectura y patrimonio del centro.',
+    naturaleza: 'Considera los cerros orientales, los senderos autorizados de Monserrate y el Jardín Botánico de Bogotá. Verifica previamente las condiciones de acceso.',
+    gastronomia: 'Explora la Plaza de Paloquemao, prueba el ajiaco santafereño y descubre restaurantes de cocina tradicional colombiana.',
+    aventura: 'Consulta caminatas guiadas por los cerros orientales y actividades recreativas autorizadas. Verifica dificultad y condiciones climáticas.',
+    familia: 'Considera el Jardín Botánico, el Planetario y los museos con actividades educativas para distintas edades.',
+    descanso: 'Explora jardines, parques urbanos y espacios de bienestar. Comprueba horarios y condiciones de ingreso.'
+  },
+  cali: {
+    cultura: 'Conoce el barrio San Antonio, el Museo La Tertulia y el monumento al Grupo Niche. Explora también la historia musical y cultural de la ciudad.',
+    naturaleza: 'Visita el Zoológico de Cali, el río Pance y los espacios verdes de la ciudad. Confirma condiciones de acceso y conservación.',
+    gastronomia: 'Prueba el sancocho de gallina, el arroz atollado, las empanadas vallunas y el champús. Explora mercados y restaurantes tradicionales.',
+    aventura: 'Investiga actividades de senderismo en los Farallones de Cali con operadores autorizados y rutas permitidas.',
+    familia: 'Considera el Zoológico de Cali, el Gato del Río y los parques urbanos para actividades familiares.',
+    descanso: 'Explora los parques, zonas verdes y espacios tranquilos de Cali. También puedes consultar opciones de bienestar.'
+  },
+  medellin: {
+    cultura: 'Explora el Museo de Antioquia, la Plaza Botero, el centro histórico y los recorridos culturales de la Comuna 13.',
+    naturaleza: 'Visita el Jardín Botánico, el Parque Arví y los espacios verdes de Medellín. Comprueba previamente accesos y horarios.',
+    gastronomia: 'Prueba la bandeja paisa, las arepas antioqueñas y la cocina tradicional. Explora mercados y restaurantes locales.',
+    aventura: 'Consulta caminatas y experiencias de naturaleza en el entorno del Parque Arví con operadores autorizados.',
+    familia: 'Considera el Parque Explora, el Planetario, el Jardín Botánico y los espacios recreativos de la ciudad.',
+    descanso: 'Explora jardines, parques y espacios de bienestar. Puedes considerar recorridos tranquilos por zonas verdes.'
+  },
+  cartagena: {
+    cultura: 'Recorre la Ciudad Amurallada, el barrio Getsemaní y el Castillo de San Felipe de Barajas. Descubre la arquitectura y la historia colonial.',
+    naturaleza: 'Consulta excursiones responsables a las Islas del Rosario y playas de la zona. Verifica condiciones marítimas y operadores autorizados.',
+    gastronomia: 'Prueba pescado con arroz con coco, patacones, arepa de huevo y dulces tradicionales. Explora la cocina caribeña.',
+    aventura: 'Consulta actividades náuticas y excursiones con operadores formales. Verifica seguros, equipos y condiciones del mar.',
+    familia: 'Considera recorridos por las murallas, plazas históricas y actividades culturales aptas para diferentes edades.',
+    descanso: 'Explora playas y espacios de bienestar. Compara las condiciones de acceso y servicios antes de desplazarte.'
+  },
+  santa_marta: {
+    cultura: 'Visita el centro histórico, la Quinta de San Pedro Alejandrino y los espacios culturales relacionados con la historia de Santa Marta.',
+    naturaleza: 'Investiga el Parque Nacional Natural Tayrona y los paisajes de Minca. Confirma cierres, permisos y condiciones ambientales.',
+    gastronomia: 'Prueba pescado fresco, arroz con coco, patacones y preparaciones tradicionales del Caribe.',
+    aventura: 'Consulta senderismo y actividades de naturaleza en Minca y zonas autorizadas del Tayrona con guías formales.',
+    familia: 'Considera recorridos por el centro histórico, playas con condiciones apropiadas y actividades culturales.',
+    descanso: 'Explora playas y alojamientos de descanso. Verifica condiciones del mar, accesos y servicios.'
+  },
+  leticia: {
+    cultura: 'Conoce la cultura amazónica mediante experiencias comunitarias, mercados locales y recorridos interpretativos con guías de la región.',
+    naturaleza: 'Investiga recorridos por el río Amazonas y visitas autorizadas a áreas naturales como Amacayacu. Confirma permisos y condiciones de acceso.',
+    gastronomia: 'Descubre preparaciones amazónicas, pescados de río y frutas regionales en establecimientos locales.',
+    aventura: 'Consulta recorridos de observación de fauna y navegación con operadores autorizados y medidas de seguridad.',
+    familia: 'Considera experiencias educativas sobre biodiversidad y cultura amazónica adecuadas para las edades de los visitantes.',
+    descanso: 'Explora alojamientos de naturaleza y experiencias tranquilas en entornos amazónicos, respetando las recomendaciones ambientales.'
+  }
+};
+
+
+
 function buildRecommendations(destination, interests){
+  const dest=String(destination||'Colombia').trim().slice(0,160);
+  const normalizedDest=normalize(dest).replace(/\s+/g,'_');
+
+  const valid=(Array.isArray(interests)?interests:[])
+    .map(x=>normalize(x))
+    .filter(x=>RULES[x]);
+
+  const chosen=valid.length?valid:['naturaleza','gastronomia','cultura'];
+  const region=regionFor(dest);
+
+  const cityKey=Object.keys(CITY_GUIDES).find(key =>
+    normalizedDest.includes(key)
+  );
+
+  const guide=cityKey?CITY_GUIDES[cityKey]:null;
+
+  const intro=`Propuesta turística para ${dest}${region?` (región: ${region.name})`:''}. Recomendaciones predefinidas del motor gratuito POP; no consulta información en tiempo real.`;
+
+  const items=chosen.slice(0,5).map((key,i)=>{
+    const description=guide?.[key]||RULES[key].text;
+    return `${i+1}. ${RULES[key].emoji} ${RULES[key].title}\n${description}`;
+  });
+
+  if(region) items.push(`${items.length+1}. 🧭 Contexto regional\n${region.hint}`);
+
+  return `${intro}\n\n${items.join('\n\n')}\n\nAntes de desplazarte: verifica horarios, tarifas, disponibilidad, estado de las vías, clima y condiciones de seguridad en fuentes oficiales y con los prestadores. POP no realiza reservas ni confirma servicios.`;
+}
+{
+  const dest=String(destination||'Colombia').trim().slice(0,160);
+  const normalizedDest=normalize(dest).replace(/\s+/g,'_');
+
+  const valid=(Array.isArray(interests)?interests:[])
+    .map(x=>normalize(x))
+    .filter(x=>RULES[x]);
+
+  const chosen=valid.length?valid:['naturaleza','gastronomia','cultura'];
+  const region=regionFor(dest);
+
+  const cityKey=Object.keys(CITY_GUIDES).find(key =>
+    normalizedDest.includes(key)
+  );
+
+  const guide=cityKey?CITY_GUIDES[cityKey]:null;
+
+  const intro=`Propuesta turística para ${dest}${region?` (región: ${region.name})`:''}. Recomendaciones predefinidas del motor gratuito POP; no consulta información en tiempo real.`;
+
+  const items=chosen.slice(0,5).map((key,i)=>{
+    const description=guide?.[key]||RULES[key].text;
+    return `${i+1}. ${RULES[key].emoji} ${RULES[key].title}\n${description}`;
+  });
+
+  if(region) items.push(`${items.length+1}. 🧭 Contexto regional\n${region.hint}`);
+
+  return `${intro}\n\n${items.join('\n\n')}\n\nAntes de desplazarte: verifica horarios, tarifas, disponibilidad, estado de las vías, clima y condiciones de seguridad en fuentes oficiales y con los prestadores. POP no realiza reservas ni confirma servicios.`;
+}
+{
+  const dest=String(destination||'Colombia').trim().slice(0,160);
+  const normalizedDest=normalize(dest).replace(/\s+/g,'_');
+
+  const valid=(Array.isArray(interests)?interests:[])
+    .map(x=>normalize(x))
+    .filter(x=>RULES[x]);
+
+  const chosen=valid.length?valid:['naturaleza','gastronomia','cultura'];
+  const region=regionFor(dest);
+
+  const cityKey=Object.keys(CITY_GUIDES).find(key =>
+    normalizedDest.includes(key)
+  );
+
+  const guide=cityKey?CITY_GUIDES[cityKey]:null;
+
+  const intro=`Propuesta turística para ${dest}${region?` (región: ${region.name})`:''}. Recomendaciones predefinidas del motor gratuito POP; no consulta información en tiempo real.`;
+
+  const items=chosen.slice(0,5).map((key,i)=>{
+    const description=guide?.[key]||RULES[key].text;
+    return `${i+1}. ${RULES[key].emoji} ${RULES[key].title}\n${description}`;
+  });
+
+  if(region) items.push(`${items.length+1}. 🧭 Contexto regional\n${region.hint}`);
+
+  return `${intro}\n\n${items.join('\n\n')}\n\nAntes de desplazarte: verifica horarios, tarifas, disponibilidad, estado de las vías, clima y condiciones de seguridad en fuentes oficiales y con los prestadores. POP no realiza reservas ni confirma servicios.`;
+}
+{
   const dest=String(destination||'Colombia').trim().slice(0,160);
   const valid=(Array.isArray(interests)?interests:[]).map(x=>normalize(x)).filter(x=>RULES[x]);
   const chosen=valid.length?valid:['naturaleza','gastronomia','cultura'];
